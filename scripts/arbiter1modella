@@ -1,0 +1,1 @@
+translate -m modella "G (g1 -> Y (!g1 S r1)) & (G F r1 -> G F g1)";

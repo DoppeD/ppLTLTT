@@ -1,0 +1,30 @@
+[INPUT]
+r1
+r2
+r3
+r4
+
+[OUTPUT]
+g1
+g2
+g3
+g4
+
+[SYS_TRANS]
+| !g1 !g2
+| !g1 !g3
+| !g2 !g3
+| !g1 !g4
+| !g2 !g4
+| !g3 !g4
+| !g1 (Y S !g1 r1)
+| !g2 (Y S !g2 r2)
+| !g3 (Y S !g3 r3)
+| !g4 (Y S !g4 r4)
+
+[SYS_LIVENESS]
+Z !r1 g1
+Z !r2 g2
+Z !r3 g3
+Z !r4 g4
+

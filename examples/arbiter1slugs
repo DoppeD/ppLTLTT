@@ -1,0 +1,12 @@
+[INPUT]
+r1
+
+[OUTPUT]
+g1
+
+[SYS_TRANS]
+| !g1 (Y S !g1 r1)
+
+[SYS_LIVENESS]
+Z !r1 g1
+

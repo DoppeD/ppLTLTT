@@ -1,0 +1,129 @@
+cabal-version:      2.4
+name:               ppLTLTT
+version:            0.1.0.0
+synopsis:
+    A tool for converting pure-past LTL formulae to temporal testers, along with auxiliary tools.
+
+-- A longer description of the package.
+-- description:
+homepage:           https://github.com/DoppeD/ppLTLTT/
+
+-- A URL where users can report bugs.
+-- bug-reports:
+license:            NONE
+author:             David Lidell
+maintainer:         david@lidell.se
+
+-- A copyright notice.
+-- copyright:
+category:           Math
+extra-source-files:
+    CHANGELOG.md
+    README.md
+
+executable ppLTLTT
+    main-is:          ppLTLTT.hs
+
+    -- Modules included in this executable, other than Main.
+    other-modules:
+        ArgsPPLTLTT 
+        Common 
+        PLTL 
+        ParserSpot
+    -- LANGUAGE extensions used by modules in this package.
+    -- other-extensions:
+    build-depends:
+        base ^>=4.14.3.0,
+        containers ==0.6.*,
+        mtl ==2.2.*,
+        optparse-applicative ==0.17.*,
+        parsec ==3.1.*,
+        process ==1.6.*,
+        transformers ==0.5.*
+
+    hs-source-dirs:   ppLTLTT, src/args, src/common, src/parsers
+    default-language: Haskell2010
+    
+executable pltl2tgba
+    main-is:          pltl2tgba.hs
+
+    -- Modules included in this executable, other than Main.
+    other-modules:
+        ArgsPltl2tgba
+        Common
+        EncodeTT
+        HOA
+        ParserHOA
+        ParserSpot
+        PLTL
+        PPAbstraction
+    -- LANGUAGE extensions used by modules in this package.
+    -- other-extensions:
+    build-depends:
+        base ^>=4.14.3.0,
+        containers ==0.6.*,
+        directory ==1.3.*,
+        mtl ==2.2.*,
+        optparse-applicative ==0.17.*,
+        parsec ==3.1.*,
+        process ==1.6.*,
+        transformers ==0.5.*
+
+    hs-source-dirs:   pltl2tgba, src/args, src/common, src/parsers
+    default-language: Haskell2010
+    
+executable pslugs
+    main-is:          pslugs.hs
+
+    -- Modules included in this executable, other than Main.
+    other-modules:
+        ArgsPSlugs
+        Common
+        EncodeTT
+        HOA
+        ParserHOA
+        ParserSlugs
+        PLTL
+        PPAbstraction
+    -- LANGUAGE extensions used by modules in this package.
+    -- other-extensions:
+    build-depends:
+        base ^>=4.14.3.0,
+        containers ==0.6.*,
+        directory ==1.3.*,
+        mtl ==2.2.*,
+        optparse-applicative ==0.17.*,
+        parsec ==3.1.*,
+        process ==1.6.*,
+        transformers ==0.5.*
+
+    hs-source-dirs:   pslugs, src/args, src/common, src/parsers
+    default-language: Haskell2010
+    
+executable pstrix
+    main-is:          pstrix.hs
+
+    -- Modules included in this executable, other than Main.
+    other-modules:
+        ArgsPStrix
+        Common
+        EncodeTT
+        HOA
+        ParserHOA
+        ParserStrix
+        PLTL
+        PPAbstraction
+    -- LANGUAGE extensions used by modules in this package.
+    -- other-extensions:
+    build-depends:
+        base ^>=4.14.3.0,
+        containers ==0.6.*,
+        directory ==1.3.*,
+        mtl ==2.2.*,
+        optparse-applicative ==0.17.*,
+        parsec ==3.1.*,
+        process ==1.6.*,
+        transformers ==0.5.*
+
+    hs-source-dirs:   pstrix, src/args, src/common, src/parsers
+    default-language: Haskell2010
