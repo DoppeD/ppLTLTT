@@ -55,17 +55,6 @@ literal = do
   else
     return $ PLTL.Prop PLTL.NotQuoted str
 
--- Reserved strings --
-
-isReserved :: String -> Bool
-isReserved = (flip elem) reservedOps
-  where reservedOps =
-          [ "next", "TRUE", "FALSE"
-          , "F", "G", "U", "M", "X"
-          , "O", "H", "S", "Z", "Y"
-          , "+", "=", "!=", "<", ">", "<=", ">="
-          ]
-
 -- Slugs specific --
 
 comment :: Parser PLTL
@@ -101,19 +90,6 @@ emptyline = do
 
 -- Constants --
 
-constant :: Parser PLTL
-constant = true <|> false
-
-true :: Parser PLTL
-true = do
-  lexeme $ string "TRUE"
-  return PLTL.T
-
-false :: Parser PLTL
-false = do
-  lexeme $ string "FALSE"
-  return PLTL.F
-
 slugsinConstant :: Parser PLTL
 slugsinConstant =
   (lexeme (char '1') >> return PLTL.T) <|> (lexeme (char '0') >> return PLTL.F)
@@ -128,7 +104,6 @@ unary =
     , opOnce
     , opPrev
     , opWPrev
-    , opNext
     ]
 
 opNot :: Parser (PLTL -> PLTL)
@@ -155,11 +130,6 @@ opWPrev :: Parser (PLTL -> PLTL)
 opWPrev = do
   strings ["T"]
   return (PLTL.UnOp PLTL.WPrev)
-
-opNext :: Parser (PLTL -> PLTL)
-opNext = do
-  strings ["X", "next"]
-  return (PLTL.UnOp PLTL.Next)
 
 -- Binary operators --
 
