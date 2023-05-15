@@ -39,7 +39,7 @@ checkBusyIndex _ = return ()
 data AbstractionPreference = BreakAtBoolean | IncludeBoolean
   deriving (Show)
 
-data StateEncoding = Binary | Decimal | OneHot
+data StateEncoding = Binary | OneHot
   deriving (Show)
 
 data InputType = Direct String | FromFile String

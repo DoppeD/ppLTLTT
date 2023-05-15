@@ -106,21 +106,10 @@ stateTypeTransform NextState = UnOp Next
 
 bitTestFunction :: StateEncoding -> Int -> Int -> Bool
 bitTestFunction Binary  = testBit
-bitTestFunction Decimal = \_ _ -> True -- Not needed
 bitTestFunction OneHot  = (==)
 
 encodeState :: StateType -> Int -> EncTTErr (Maybe PLTL)
 encodeState stType st = do
-  EncodeTTState { bitToString, monitorVar, numStates, stateEncoding } <- get
-  case stateEncoding of
-    Decimal ->
-      return $ Just $ Sl $ ArithOp EQQ stateProp (Prop NotQuoted (show st))
-      where stateProp = stateTypeTransform stType $ Prop NotQuoted monitorVar
-    _ ->
-      encodeStateNonDecimal stType st
-
-encodeStateNonDecimal :: StateType -> Int -> EncTTErr (Maybe PLTL)
-encodeStateNonDecimal stType st = do
   EncodeTTState { bitToString, monitorVar, numStates, stateEncoding } <- get
   if (numStates < 2) then return Nothing else do
     let varsNeeded = variablesNeededForState stateEncoding numStates
@@ -134,7 +123,6 @@ variablesNeededForState encoding max =
     0
   else case encoding of
     Binary -> ceiling (logBase 2 (fromIntegral max))
-    Decimal -> 1
     OneHot -> max
 
 addToEncoding :: String -> PLTL -> EncTTErr ()
