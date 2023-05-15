@@ -53,7 +53,7 @@ processFile :: String -> StateT PSpotState IO ()
 processFile file = do
   contents <- liftIO $ readFile file
   processInput contents
-  
+
 processInput :: String -> StateT PSpotState IO ()
 processInput str =
   case parseSpot str of
@@ -61,10 +61,6 @@ processInput str =
     Right pltl -> do
       PSpotState { abstractionPreference } <- get
       processSpec $ performAbstraction abstractionPreference (busyIndices pltl) [("ORIGINAL", pltl)]
-
-isAbstractionVar :: (String -> Bool) -> PLTL -> ((PLTL, String), Bool)
-isAbstractionVar f (PLTL.Sl (PLTL.ArithOp PLTL.EQQ (PLTL.Prop PLTL.NotQuoted p) g)) = ((g, p), f p)
-isAbstractionVar _ p = ((p, ""), False)
 
 processSpec :: ([(String, PLTL)], Map.Map PLTL Int) -> StateT PSpotState IO ()
 processSpec (newSpec, ppltlToConvert) = do

@@ -19,8 +19,6 @@ data Slugs = Section String
            | Memory Int [PLTL]
            | Recall Int
            | Comment String
-           | PropRange String Int Int
-           | ArithOp ArithOp PLTL PLTL
            | EmptyLine
   deriving (Eq, Ord, Show)
 
@@ -46,15 +44,6 @@ data BinOp = Since
            | Xor
            | Impl
            | Iff
-  deriving (Eq, Ord, Show)
-
-data ArithOp = EQQ
-             | NEQ
-             | LTH
-             | LTE
-             | GTH
-             | GTE
-             | Add
   deriving (Eq, Ord, Show)
 
 data OperatorType = Boolean | Future | Past | Slugs
@@ -119,9 +108,7 @@ pltlToStringInfix (Sl (Section sec)) = "[" ++ sec ++ "]"
 pltlToStringInfix (Sl (Memory i es)) = "$ " ++ show i ++ " " ++ intercalate " " (fmap (withParens . pltlToStringInfix) es)
 pltlToStringInfix (Sl (Recall i)) = "? " ++ show i
 pltlToStringInfix (Sl (Comment str)) = "# " ++ str
-pltlToStringInfix (Sl (PropRange p min max)) = p ++ ":" ++ show min ++ "..." ++ show max
 pltlToStringInfix (Sl EmptyLine) = ""
-pltlToStringInfix (Sl (ArithOp op e1 e2)) = withParens (pltlToStringInfix e1) ++ " " ++ arithopToString op ++ " " ++ withParens (pltlToStringInfix e2)
 pltlToStringInfix (UnOp Not (UnOp Not e1)) = pltlToStringInfix e1
 pltlToStringInfix (UnOp op e) = unopToString op ++ " " ++ withParens (pltlToStringInfix e)
 pltlToStringInfix (BinOp op e1 e2) = withParens (pltlToStringInfix e1) ++ " " ++ binopToString op ++ " " ++ withParens (pltlToStringInfix e2)
@@ -136,9 +123,7 @@ pltlToStringPrefix (Sl (Section sec)) = "[" ++ sec ++ "]"
 pltlToStringPrefix (Sl (Memory i es)) = "$ " ++ show i ++ " " ++ intercalate " " (fmap pltlToStringPrefix es)
 pltlToStringPrefix (Sl (Recall i)) = "? " ++ show i
 pltlToStringPrefix (Sl (Comment str)) = "#" ++ str
-pltlToStringPrefix (Sl (PropRange p min max)) = p ++ ":" ++ show min ++ "..." ++ show max
 pltlToStringPrefix (Sl EmptyLine) = ""
-pltlToStringPrefix (Sl (ArithOp op e1 e2)) = arithopToString op ++ " " ++ pltlToStringPrefix e1 ++ " " ++ pltlToStringPrefix e2
 pltlToStringPrefix (UnOp Next (UnOp Not e)) = "! " ++ pltlToStringPrefix (UnOp Next e)
 pltlToStringPrefix (UnOp Next (Prop q p)) = pltlToStringPrefix (Prop q p) ++ "'"
 pltlToStringPrefix (UnOp Not (UnOp Not e1)) = pltlToStringPrefix e1
@@ -172,12 +157,3 @@ binopToString Or       = "|"
 binopToString Xor      = "^"
 binopToString Impl     = "->"
 binopToString Iff      = "<->"
-
-arithopToString :: ArithOp -> String
-arithopToString EQQ = "="
-arithopToString NEQ = "!="
-arithopToString GTH = ">"
-arithopToString LTH = "<"
-arithopToString GTE = ">="
-arithopToString LTE = "<="
-arithopToString Add = "+"
