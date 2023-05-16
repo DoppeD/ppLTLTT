@@ -50,6 +50,14 @@ data UnOp
     | Hist
   deriving (Eq, Ord, Show, Read)
 
+fromPLTLUnOp :: PLTL.UnOp -> UnOp
+fromPLTLUnOp PLTL.Not = Not
+fromPLTLUnOp PLTL.Prev = Prev
+fromPLTLUnOp PLTL.WPrev = WPrev
+fromPLTLUnOp PLTL.Once = Once
+fromPLTLUnOp PLTL.Hist = Hist
+fromPLTLUnOp _ = Not -- This should not happen
+
 data BinOp
     = Since
     | WSince
@@ -59,6 +67,16 @@ data BinOp
     | Impl
     | Iff
   deriving (Eq, Ord, Show, Read)
+
+fromPLTLBinOp :: PLTL.BinOp -> BinOp
+fromPLTLBinOp PLTL.Since = Since
+fromPLTLBinOp PLTL.WSince = WSince
+fromPLTLBinOp PLTL.And = And
+fromPLTLBinOp PLTL.Or = Or
+fromPLTLBinOp PLTL.Xor = Xor
+fromPLTLBinOp PLTL.Impl = Impl
+fromPLTLBinOp PLTL.Iff = Iff
+fromPLTLBinOp _ = And -- This should not happen
 
 data PastState = PastState
   { evaluations         :: Integer
@@ -167,71 +185,50 @@ updateOrReadIndex elem mapToGet indexToGet mapUpdate = do
     (Nothing, newMap) -> do
       mapUpdate newMap nextIndex
       return nextIndex
-
     (Just currentIndex, _) ->
       return currentIndex
 
-annotateUnary :: (IndexedFormula -> (Int -> IndexedFormula)) -> PLTL -> PLTL -> AnnotationIO (IndexedFormula, Int)
-annotateUnary toIndexed formula f = do
-  annotatedF <- annotateFormula f
+annotateAndIndex :: Ord a => (a -> (Int -> IndexedFormula)) -> (a -> (Int -> IndexedFormula)) -> a -> PLTL -> AnnotationIO IndexedFormula
+annotateAndIndex toIndexed toReturn annotatedF formula = do
   index <- updateOrReadIndex formula prevs prevIndex updatePrevs
   modify (\s -> s { indexedPrevs = ((toIndexed annotatedF) index, index) : indexedPrevs s })
-  return ((toIndexed annotatedF) index, index)
+  return $ toReturn annotatedF index
   where
     updatePrevs newPrevs newIndex =
       modify (\s -> s { prevs = newPrevs, prevIndex = newIndex + 1 })
 
--- TODO: Clean up
+toIndexedUnOp :: PLTL.UnOp -> (IndexedFormula -> (Int -> IndexedFormula))
+toIndexedUnOp PLTL.Prev = const
+toIndexedUnOp PLTL.WPrev = UnOp Not
+toIndexedUnOp PLTL.Once = UnOp Once
+toIndexedUnOp PLTL.Hist = \f -> flip (UnOp Not) 0 . UnOp Hist f
+toIndexedUnOp _ = const -- This should not happen
+
+toIndexedBinOp :: PLTL.BinOp -> ((IndexedFormula, IndexedFormula) -> (Int -> IndexedFormula))
+toIndexedBinOp PLTL.Since = uncurry $ BinOp Since
+toIndexedBinOp PLTL.WSince = \(f, g) -> flip (UnOp Not) 0 . BinOp WSince f g
+toIndexedBinOp _ = \f i -> fst f  -- This should not happen
+
 annotateFormula :: PLTL -> AnnotationIO IndexedFormula
 annotateFormula formula =
-  case formula of
-    PLTL.T -> return T
-    PLTL.F -> return F
-    PLTL.Prop _ p ->
+  case (formula, PLTL.operatorType formula) of
+    (PLTL.T, _) -> return T
+    (PLTL.F, _) -> return T
+    (PLTL.Prop _ p, _) ->
       liftM Prop $ updateOrReadIndex p vars varIndex updateVars
-    PLTL.BinOp PLTL.Or f g ->
-      liftM3 (BinOp Or) (annotateFormula f) (annotateFormula g) (return 0)
-    PLTL.BinOp PLTL.Xor f g ->
-      liftM3 (BinOp Xor) (annotateFormula f) (annotateFormula g) (return 0)
-    PLTL.BinOp PLTL.And f g ->
-      liftM3 (BinOp And) (annotateFormula f) (annotateFormula g) (return 0)
-    PLTL.UnOp PLTL.Not f ->
-      liftM2 (UnOp Not) (annotateFormula f) (return 0)
-    PLTL.UnOp PLTL.Prev f ->
-      liftM (uncurry (UnOp Prev)) $ annotateUnary const formula f
-    PLTL.UnOp PLTL.WPrev f -> do
+        where updateVars newVars newIndex =
+                modify (\s -> s { vars = newVars, varIndex = newIndex + 1 })
+    (PLTL.UnOp op f, PLTL.Boolean) ->
+      liftM2 (UnOp (fromPLTLUnOp op)) (annotateFormula f) (return 0)
+    (PLTL.BinOp op f g, PLTL.Boolean) ->
+      liftM3 (BinOp (fromPLTLBinOp op)) (annotateFormula f) (annotateFormula g) (return 0)
+    (PLTL.UnOp op f, PLTL.Past) -> do
       annotatedF <- annotateFormula f
-      index <- updateOrReadIndex formula prevs prevIndex updatePrevs
-      modify (\s -> s { indexedPrevs = ((UnOp Not annotatedF 0), index) : indexedPrevs s })
-      return (UnOp WPrev annotatedF index)
-    PLTL.UnOp PLTL.Once f ->
-      liftM fst $ annotateUnary (UnOp Once) (PLTL.UnOp PLTL.Prev formula) f
-    PLTL.UnOp PLTL.Hist f -> do
-      annotatedF <- annotateFormula f
-      index <- updateOrReadIndex formula prevs prevIndex updatePrevs
-      modify (\s -> s { indexedPrevs = (UnOp Not (UnOp Hist annotatedF index) 0, index) : indexedPrevs s })
-      return (UnOp Hist annotatedF index)
-    PLTL.BinOp PLTL.Since f g -> do
+      annotateAndIndex (toIndexedUnOp op) (UnOp (fromPLTLUnOp op)) annotatedF formula
+    (PLTL.BinOp op f g, PLTL.Past) -> do
       annotatedF <- annotateFormula f
       annotatedG <- annotateFormula g
-      index <- updateOrReadIndex formula prevs prevIndex updatePrevs
-      modify (\s -> s { indexedPrevs = (BinOp Since annotatedF annotatedG index, index) : indexedPrevs s })
-      return (BinOp Since annotatedF annotatedG index)
-    PLTL.BinOp PLTL.WSince f g -> do
-      annotatedF <- annotateFormula f
-      annotatedG <- annotateFormula g
-      index <- updateOrReadIndex formula prevs prevIndex updatePrevs
-      modify (\s -> s { indexedPrevs = (UnOp Not (BinOp WSince annotatedF annotatedG index) 0, index) : indexedPrevs s })
-      return (BinOp WSince annotatedF annotatedG index)
-    PLTL.BinOp PLTL.Impl f g ->
-      liftM3 (BinOp Impl) (annotateFormula f) (annotateFormula g) (return 0)
-    PLTL.BinOp PLTL.Iff f g ->
-      liftM3 (BinOp Iff) (annotateFormula f) (annotateFormula g) (return 0)
-    _ -> liftIO $ die $ "ppLTLTT: Cannot handle future fragment of LTL: " ++ PLTL.pltlToStringInfix formula
-    where updateVars newVars newIndex =
-            modify (\s -> s { vars = newVars, varIndex = newIndex + 1 })
-          updatePrevs newPrevs newIndex =
-            modify (\s -> s { prevs = newPrevs, prevIndex = newIndex + 1 })
+      annotateAndIndex (toIndexedBinOp op) (uncurry (BinOp (fromPLTLBinOp op))) (annotatedF, annotatedG) formula
 
 ---- Entry point ----
 
