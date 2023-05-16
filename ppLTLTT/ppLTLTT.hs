@@ -32,7 +32,7 @@ type State           = Integer
 type Valuation       = State
 type ProcessedStates = Map.Map State Int -- A state and its associated index.
 
--- Prop, Prev, Once, Histor and Since have indices, so that we can get/set the corresponding
+-- Subformulae have indices, so that we can get/set the corresponding
 -- bit when checking/setting truth values in valuations and states.
 data IndexedFormula
     = Prop Int
@@ -229,6 +229,7 @@ annotateFormula formula =
       annotatedF <- annotateFormula f
       annotatedG <- annotateFormula g
       annotateAndIndex (toIndexedBinOp op) (uncurry (BinOp (fromPLTLBinOp op))) (annotatedF, annotatedG) formula
+    _ -> liftIO $ die $ "ppLTLTT: Cannot handle the following formula: " ++ PLTL.pltlToStringInfix formula
 
 ---- Entry point ----
 
