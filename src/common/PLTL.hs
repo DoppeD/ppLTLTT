@@ -34,11 +34,11 @@ data UnOp = Prev
 
 
 data BinOp = Since
-           | SinceW
+           | WSince
            | Until
-           | UntilW
+           | WUntil
            | Release
-           | ReleaseS
+           | SRelease
            | And
            | Or
            | Xor
@@ -62,11 +62,11 @@ operatorType pltl =
     UnOp Not _         -> Boolean
     UnOp Once _        -> Past
     BinOp Since _ _    -> Past
-    BinOp SinceW _ _   -> Past
+    BinOp WSince _ _   -> Past
     BinOp Until _ _    -> Future
-    BinOp UntilW _ _   -> Future
+    BinOp WUntil _ _   -> Future
     BinOp Release _ _  -> Future
-    BinOp ReleaseS _ _ -> Future
+    BinOp SRelease _ _ -> Future
     BinOp And _ _      -> Boolean
     BinOp Or _ _       -> Boolean
     BinOp Xor _ _      -> Boolean
@@ -147,11 +147,11 @@ unopToString Once = "O"
 
 binopToString :: BinOp -> String
 binopToString Since    = "S"
-binopToString SinceW   = "Z"
+binopToString WSince   = "Z"
 binopToString Until    = "U"
-binopToString UntilW   = "W"
+binopToString WUntil   = "W"
 binopToString Release  = "R"
-binopToString ReleaseS = "M"
+binopToString SRelease = "M"
 binopToString And      = "&"
 binopToString Or       = "|"
 binopToString Xor      = "^"

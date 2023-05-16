@@ -147,11 +147,11 @@ binaryTemporal :: Parser (PLTL -> PLTL -> PLTL)
 binaryTemporal =
   choice
     [ opUntil
-    , opUntilW
+    , opWUntil
     , opRelease
-    , opReleaseS
+    , opSRelease
     , opSince
-    , opSinceW
+    , opWSince
     ]
 
 opAnd :: Parser (PLTL -> PLTL -> PLTL)
@@ -184,30 +184,30 @@ opUntil = do
   strings ["U"]
   return (PLTL.BinOp PLTL.Until)
 
-opUntilW :: Parser (PLTL -> PLTL -> PLTL)
-opUntilW = do
+opWUntil :: Parser (PLTL -> PLTL -> PLTL)
+opWUntil = do
   strings ["W"]
-  return (PLTL.BinOp PLTL.UntilW)
+  return (PLTL.BinOp PLTL.WUntil)
 
 opRelease :: Parser (PLTL -> PLTL -> PLTL)
 opRelease = do
   strings ["R", "V"]
   return (PLTL.BinOp PLTL.Release)
 
-opReleaseS :: Parser (PLTL -> PLTL -> PLTL)
-opReleaseS = do
+opSRelease :: Parser (PLTL -> PLTL -> PLTL)
+opSRelease = do
   strings ["M"]
-  return (PLTL.BinOp PLTL.ReleaseS)
+  return (PLTL.BinOp PLTL.SRelease)
 
 opSince :: Parser (PLTL -> PLTL -> PLTL)
 opSince = do
   strings ["S"]
   return (PLTL.BinOp PLTL.Since)
 
-opSinceW :: Parser (PLTL -> PLTL -> PLTL)
-opSinceW = do
+opWSince :: Parser (PLTL -> PLTL -> PLTL)
+opWSince = do
   strings ["Z"]
-  return (PLTL.BinOp PLTL.SinceW)
+  return (PLTL.BinOp PLTL.WSince)
 
 -- Helper functions --
 

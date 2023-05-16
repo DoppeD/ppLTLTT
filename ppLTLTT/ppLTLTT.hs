@@ -6,7 +6,7 @@ module Main where
 import qualified Data.Map as Map
 
 import Control.Exception      ( try )
-import Control.Monad          ( liftM, liftM2, unless )
+import Control.Monad          ( liftM, liftM2, liftM3, unless )
 import Control.Monad.IO.Class ( liftIO )
 import Control.Monad.Trans.State.Strict
                               ( execStateT, get, gets, modify, runStateT, StateT )
@@ -36,20 +36,28 @@ type ProcessedStates = Map.Map State Int -- A state and its associated index.
 -- bit when checking/setting truth values in valuations and states.
 data IndexedFormula
     = Prop Int
-    | Not IndexedFormula
-    | Prev IndexedFormula Int
-    | WPrev IndexedFormula Int
-    | Once IndexedFormula Int
-    | Histor IndexedFormula Int
-    | Since IndexedFormula IndexedFormula Int
-    | SinceW IndexedFormula IndexedFormula Int
-    | And IndexedFormula IndexedFormula
-    | Or IndexedFormula IndexedFormula
-    | Xor IndexedFormula IndexedFormula
-    | Impl IndexedFormula IndexedFormula
-    | Iff IndexedFormula IndexedFormula
+    | UnOp UnOp IndexedFormula Int
+    | BinOp BinOp IndexedFormula IndexedFormula Int
     | T
     | F
+  deriving (Eq, Ord, Show, Read)
+
+data UnOp
+    = Not
+    | Prev
+    | WPrev
+    | Once
+    | Hist
+  deriving (Eq, Ord, Show, Read)
+
+data BinOp
+    = Since
+    | WSince
+    | And
+    | Or
+    | Xor
+    | Impl
+    | Iff
   deriving (Eq, Ord, Show, Read)
 
 data PastState = PastState
@@ -74,20 +82,20 @@ data AnnotationState = AnnotationState
 -- Anything involving propositions should be in the valuation.
 eval :: State -> Valuation -> IndexedFormula -> Bool
 eval state val (Prop i) = testBit val i
-eval state val (Or f g) = (eval state val f) || (eval state val g)
-eval state val (Xor f g) = (eval state val f) /= (eval state val g)
-eval state val (And f g) = (eval state val f) && (eval state val g)
-eval state val (Not f) = not (eval state val f)
-eval state val (Prev _ i) = testBit state i
-eval state val (WPrev _ i) = not (testBit state i)
-eval state val (Once f i) = (testBit state i) || (eval state val f)
-eval state val (Histor f i) = (not (testBit state i)) && (eval state val f)
-eval state val (Since f g i) =
+eval state val (BinOp Or f g _) = (eval state val f) || (eval state val g)
+eval state val (BinOp Xor f g _) = (eval state val f) /= (eval state val g)
+eval state val (BinOp And f g _) = (eval state val f) && (eval state val g)
+eval state val (UnOp Not f _) = not (eval state val f)
+eval state val (UnOp Prev _ i) = testBit state i
+eval state val (UnOp WPrev _ i) = not (testBit state i)
+eval state val (UnOp Once f i) = (testBit state i) || (eval state val f)
+eval state val (UnOp Hist f i) = (not (testBit state i)) && (eval state val f)
+eval state val (BinOp Since f g i) =
   ((testBit state i) && (eval state val f)) || (eval state val g)
-eval state val (SinceW f g i) =
+eval state val (BinOp WSince f g i) =
   (not (testBit state i) && (eval state val f)) || (eval state val g)
-eval state val (Impl f g) = (not (eval state val f)) || (eval state val g)
-eval state val (Iff f g) = (eval state val f) == (eval state val g)
+eval state val (BinOp Impl f g _) = (not (eval state val f)) || (eval state val g)
+eval state val (BinOp Iff f g _) = (eval state val f) == (eval state val g)
 eval state val T = True
 eval state val F = False
 
@@ -182,43 +190,43 @@ annotateFormula formula =
     PLTL.Prop _ p ->
       liftM Prop $ updateOrReadIndex p vars varIndex updateVars
     PLTL.BinOp PLTL.Or f g ->
-      liftM2 Or (annotateFormula f) (annotateFormula g)
+      liftM3 (BinOp Or) (annotateFormula f) (annotateFormula g) (return 0)
     PLTL.BinOp PLTL.Xor f g ->
-      liftM2 Xor (annotateFormula f) (annotateFormula g)
+      liftM3 (BinOp Xor) (annotateFormula f) (annotateFormula g) (return 0)
     PLTL.BinOp PLTL.And f g ->
-      liftM2 And (annotateFormula f) (annotateFormula g)
+      liftM3 (BinOp And) (annotateFormula f) (annotateFormula g) (return 0)
     PLTL.UnOp PLTL.Not f ->
-      liftM Not (annotateFormula f)
+      liftM2 (UnOp Not) (annotateFormula f) (return 0)
     PLTL.UnOp PLTL.Prev f ->
-      liftM (uncurry Prev) $ annotateUnary const formula f
+      liftM (uncurry (UnOp Prev)) $ annotateUnary const formula f
     PLTL.UnOp PLTL.WPrev f -> do
       annotatedF <- annotateFormula f
       index <- updateOrReadIndex formula prevs prevIndex updatePrevs
-      modify (\s -> s { indexedPrevs = ((Not annotatedF), index) : indexedPrevs s })
-      return (WPrev annotatedF index)
+      modify (\s -> s { indexedPrevs = ((UnOp Not annotatedF 0), index) : indexedPrevs s })
+      return (UnOp WPrev annotatedF index)
     PLTL.UnOp PLTL.Once f ->
-      liftM fst $ annotateUnary Once (PLTL.UnOp PLTL.Prev formula) f
+      liftM fst $ annotateUnary (UnOp Once) (PLTL.UnOp PLTL.Prev formula) f
     PLTL.UnOp PLTL.Hist f -> do
       annotatedF <- annotateFormula f
       index <- updateOrReadIndex formula prevs prevIndex updatePrevs
-      modify (\s -> s { indexedPrevs = (Not (Histor annotatedF index), index) : indexedPrevs s })
-      return (Histor annotatedF index)
+      modify (\s -> s { indexedPrevs = (UnOp Not (UnOp Hist annotatedF index) 0, index) : indexedPrevs s })
+      return (UnOp Hist annotatedF index)
     PLTL.BinOp PLTL.Since f g -> do
       annotatedF <- annotateFormula f
       annotatedG <- annotateFormula g
       index <- updateOrReadIndex formula prevs prevIndex updatePrevs
-      modify (\s -> s { indexedPrevs = (Since annotatedF annotatedG index, index) : indexedPrevs s })
-      return (Since annotatedF annotatedG index)
-    PLTL.BinOp PLTL.SinceW f g -> do
+      modify (\s -> s { indexedPrevs = (BinOp Since annotatedF annotatedG index, index) : indexedPrevs s })
+      return (BinOp Since annotatedF annotatedG index)
+    PLTL.BinOp PLTL.WSince f g -> do
       annotatedF <- annotateFormula f
       annotatedG <- annotateFormula g
       index <- updateOrReadIndex formula prevs prevIndex updatePrevs
-      modify (\s -> s { indexedPrevs = (Not (SinceW annotatedF annotatedG index), index) : indexedPrevs s })
-      return (SinceW annotatedF annotatedG index)
+      modify (\s -> s { indexedPrevs = (UnOp Not (BinOp WSince annotatedF annotatedG index) 0, index) : indexedPrevs s })
+      return (BinOp WSince annotatedF annotatedG index)
     PLTL.BinOp PLTL.Impl f g ->
-      liftM2 Impl (annotateFormula f) (annotateFormula g)
+      liftM3 (BinOp Impl) (annotateFormula f) (annotateFormula g) (return 0)
     PLTL.BinOp PLTL.Iff f g ->
-      liftM2 Iff (annotateFormula f) (annotateFormula g)
+      liftM3 (BinOp Iff) (annotateFormula f) (annotateFormula g) (return 0)
     _ -> liftIO $ die $ "ppLTLTT: Cannot handle future fragment of LTL: " ++ PLTL.pltlToStringInfix formula
     where updateVars newVars newIndex =
             modify (\s -> s { vars = newVars, varIndex = newIndex + 1 })

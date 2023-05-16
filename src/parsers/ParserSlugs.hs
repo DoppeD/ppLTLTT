@@ -137,7 +137,7 @@ binary :: Parser (PLTL -> PLTL -> PLTL)
 binary =
   choice
     [ opSince
-    , opSinceW
+    , opWSince
     , opAnd
     , opOr
     , opXor
@@ -147,7 +147,7 @@ binaryTemporal :: Parser (PLTL -> PLTL -> PLTL)
 binaryTemporal =
   choice
     [ opSince
-    , opSinceW
+    , opWSince
     ]
 
 opAnd :: Parser (PLTL -> PLTL -> PLTL)
@@ -170,10 +170,10 @@ opSince = do
   strings ["S"]
   return (PLTL.BinOp PLTL.Since)
 
-opSinceW :: Parser (PLTL -> PLTL -> PLTL)
-opSinceW = do
+opWSince :: Parser (PLTL -> PLTL -> PLTL)
+opWSince = do
   strings ["Z"]
-  return (PLTL.BinOp PLTL.SinceW)
+  return (PLTL.BinOp PLTL.WSince)
 
 -- Helper functions --
 
